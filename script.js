@@ -1,72 +1,28 @@
 // Datos de ejemplo
-let asignaciones = [
-    {
-        id: 1,
-        nombre: "Juan Pérez García",
-        privilegio: "Anciano",
-        designacion: "Superintendente de Circuito",
-        sup_depto: "México Norte",
-        cgs: true,
-        aud: true,
-        vid: true,
-        mic: false,
-        atp: true,
-        aco: false,
-        pue: true,
-        pre_es: true,
-        tdb: false,
-        pe_e: true,
-        nvc: false,
-        l_lib: true,
-        ebc: false,
-        ora: true,
-        pre_fs: false,
-        l_ata: true,
-        d_pub: true,
-        d_pub_f: false,
-        ultima_asignacion: "Superintendente de Circuito",
-        fecha_ult_asignacion: "2024-01-15"
-    },
-    {
-        id: 2,
-        nombre: "María López Hernández",
-        privilegio: "Siervo Ministerial",
-        designacion: "Precursor Regular",
-        sup_depto: "Guadalajara",
-        cgs: false,
-        aud: true,
-        vid: false,
-        mic: true,
-        atp: false,
-        aco: true,
-        pue: false,
-        pre_es: false,
-        tdb: true,
-        pe_e: false,
-        nvc: true,
-        l_lib: false,
-        ebc: true,
-        ora: false,
-        pre_fs: true,
-        l_ata: false,
-        d_pub: true,
-        d_pub_f: true,
-        ultima_asignacion: "Precursor Regular",
-        fecha_ult_asignacion: "2024-02-20"
-    }
-];
+let currentData = [];
 
 let currentEditId = null;
 let sortDirection = {};
 
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', function() {
-    renderTable();
+    // Cargar datos desde localStorage
+    loadDataFromStorage();
+    renderTable(currentData);
     document.getElementById('searchInput').addEventListener('input', filterTable);
     document.getElementById('asignacionForm').addEventListener('submit', handleSubmit);
 });
 
-function renderTable(data = asignaciones) {
+function loadDataFromStorage() {
+    const savedData = localStorage.getItem('asignacionesData');
+    currentData = savedData ? JSON.parse(savedData) : [];
+}
+
+function saveDataToStorage() {
+    localStorage.setItem('asignacionesData', JSON.stringify(currentData));
+}
+
+function renderTable(data = currentData) {
     const tbody = document.getElementById('tableBody');
     tbody.innerHTML = '';
 
@@ -98,11 +54,8 @@ function renderTable(data = asignaciones) {
             <td class="checkbox-cell editable-cell" data-field="d_pub_f">${row.d_pub_f ? '<i class="fas fa-check"></i>' : ''}</td>
             <td class="editable-cell" data-field="ultima_asignacion">${row.ultima_asignacion}</td>
             <td class="action-buttons">
-                <button class="edit-btn" onclick="enableEditing(${row.id})" title="Editar">
+                <button class="edit-btn" onclick="editAsignacion(${row.id})" title="Editar">
                     <i class="fas fa-edit"></i>
-                </button>
-                <button class="save-btn" style="display: none;" onclick="saveEditing(${row.id})" title="Guardar">
-                    <i class="fas fa-save"></i>
                 </button>
                 <button class="delete-btn" onclick="deleteAsignacion(${row.id})" title="Eliminar">
                     <i class="fas fa-trash"></i>
@@ -111,6 +64,9 @@ function renderTable(data = asignaciones) {
         `;
         tbody.appendChild(tr);
     });
+    
+    // Guardar en localStorage cada vez que se renderiza
+    saveDataToStorage();
 }
 
 function enableEditing(id) {
@@ -125,7 +81,7 @@ function enableEditing(id) {
     cells.forEach(cell => {
         const field = cell.dataset.field;
         const currentValue = cell.textContent.trim();
-        const asignacion = asignaciones.find(a => a.id === id);
+        const asignacion = currentData.find(a => a.id === id);
 
         if (['cgs', 'aud', 'vid', 'mic', 'atp', 'aco', 'pue', 'pre_es', 'tdb', 'pe_e', 'nvc', 'l_lib', 'ebc', 'ora', 'pre_fs', 'l_ata', 'd_pub', 'd_pub_f'].includes(field)) {
             // Checkbox fields
@@ -222,9 +178,9 @@ function saveEditing(id) {
     });
 
     // Update the data
-    const index = asignaciones.findIndex(a => a.id === id);
+    const index = currentData.findIndex(a => a.id === id);
     if (index !== -1) {
-        asignaciones[index] = { ...asignaciones[index], ...updatedData };
+        currentData[index] = { ...currentData[index], ...updatedData };
     }
 
     // Re-render the table to show the updated data
@@ -233,7 +189,7 @@ function saveEditing(id) {
 
 function filterTable() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const filtered = asignaciones.filter(row =>
+    const filtered = currentData.filter(row =>
         row.nombre.toLowerCase().includes(searchTerm) ||
         row.privilegio.toLowerCase().includes(searchTerm) ||
         row.designacion.toLowerCase().includes(searchTerm) ||
@@ -250,7 +206,7 @@ function sortTable(columnIndex) {
 
     sortDirection[column] = !sortDirection[column];
 
-    const sorted = [...asignaciones].sort((a, b) => {
+    const sorted = [...currentData].sort((a, b) => {
         const aVal = a[column].toLowerCase();
         const bVal = b[column].toLowerCase();
         
@@ -278,7 +234,7 @@ function closeModal() {
 }
 
 function editAsignacion(id) {
-    const asignacion = asignaciones.find(a => a.id === id);
+    const asignacion = currentData.find(a => a.id === id);
     if (!asignacion) return;
 
     currentEditId = id;
@@ -302,7 +258,7 @@ function editAsignacion(id) {
 
 function deleteAsignacion(id) {
     if (confirm('¿Está seguro de eliminar esta asignación?')) {
-        asignaciones = asignaciones.filter(a => a.id !== id);
+        currentData = currentData.filter(a => a.id !== id);
         renderTable();
     }
 }
@@ -314,7 +270,7 @@ function handleSubmit(e) {
     const asignacion = {};
     
     // Mapear campos del formulario
-    const fields = ['nombre', 'privilegio', 'designacion', 'sup_depto', 'ultima_asignacion', 'fecha_ult_asignacion'];
+    const fields = ['nombre', 'privilegio', 'designacion', 'sup_depto', 'ultima_asignacion'];
     const checkboxes = ['cgs', 'aud', 'vid', 'mic', 'atp', 'aco', 'pue', 'pre_es', 'tdb', 'pe_e', 'nvc', 'l_lib', 'ebc', 'ora', 'pre_fs', 'l_ata', 'd_pub', 'd_pub_f'];
     
     fields.forEach(field => {
@@ -327,13 +283,13 @@ function handleSubmit(e) {
     
     if (currentEditId) {
         // Editar
-        const index = asignaciones.findIndex(a => a.id === currentEditId);
+        const index = currentData.findIndex(a => a.id === currentEditId);
         asignacion.id = currentEditId;
-        asignaciones[index] = asignacion;
+        currentData[index] = asignacion;
     } else {
         // Agregar
-        asignacion.id = Math.max(...asignaciones.map(a => a.id)) + 1;
-        asignaciones.push(asignacion);
+        asignacion.id = Math.max(...currentData.map(a => a.id || 0)) + 1 || 1;
+        currentData.push(asignacion);
     }
     
     renderTable();
@@ -341,7 +297,7 @@ function handleSubmit(e) {
 }
 
 function exportTable() {
-    const dataStr = JSON.stringify(asignaciones, null, 2);
+    const dataStr = JSON.stringify(currentData, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -358,7 +314,7 @@ function importTable(event) {
         try {
             const importedData = JSON.parse(e.target.result);
             if (Array.isArray(importedData)) {
-                asignaciones = importedData;
+                currentData = importedData;
                 renderTable();
                 alert('Datos cargados correctamente');
             } else {
